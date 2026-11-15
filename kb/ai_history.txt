@@ -1,0 +1,7 @@
+Alan Turing proposed the Turing Test in 1950 in the paper "Computing Machinery and Intelligence".
+IBM's Deep Blue defeated world chess champion Garry Kasparov in 1997.
+DeepMind's AlphaGo defeated the Go champion Lee Sedol in 2016.
+AlexNet won the ImageNet competition in 2012, sparking the modern deep learning revolution.
+John McCarthy coined the term Artificial Intelligence in 1956 at the Dartmouth summer research conference.
+Frank Rosenblatt invented the Perceptron in 1958 at Cornell Aeronautical Laboratory.
+

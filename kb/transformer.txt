@@ -1,0 +1,7 @@
+The Transformer architecture was introduced by Vaswani et al. in the 2017 paper "Attention Is All You Need".
+The Transformer relies entirely on self-attention mechanisms without recurrence or convolution.
+The original Transformer was evaluated on WMT 2014 English-to-German and English-to-French translation tasks.
+The Transformer consists of an encoder stack and a decoder stack each with multi-head attention.
+Self-attention allows the model to attend to different positions of the input sequence simultaneously.
+The Transformer revolutionized natural language processing by enabling scalable parallel training across modern GPUs.
+

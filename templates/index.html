@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HalluGuard: Claim-Level Hallucination Detector &amp; Guarded Answer Generator</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-icon">🛡️</div>
+        <div class="brand-text">
+          <h1>HalluGuard <span class="badge-tag">PoC CA-3</span></h1>
+          <p class="subtitle">Claim-Level Hallucination Detector &amp; Guarded Answer Generator</p>
+        </div>
+      </div>
+      <div class="header-meta">
+        <div class="meta-pill">
+          <span class="dot live"></span> Offline Localhost
+        </div>
+        <div class="meta-pill">
+          <span class="icon">📚</span> KB Facts: <strong id="header-kb-count">{{ kb_stats.total_sentences }}</strong>
+        </div>
+        <div class="meta-pill">
+          <span class="icon">⚡</span> Model: <strong>Rule + DeBERTa NLI</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="tab-nav">
+      <div class="nav-container">
+        <button class="tab-btn active" data-tab="studio">
+          <span class="tab-icon">🎯</span> Verification Studio
+        </button>
+        <button class="tab-btn" data-tab="benchmark">
+          <span class="tab-icon">📊</span> PoC Evaluation (Table 8.1b)
+        </button>
+        <button class="tab-btn" data-tab="colab">
+          <span class="tab-icon">🧪</span> Colab DeBERTa &amp; HaluEval
+        </button>
+        <button class="tab-btn" data-tab="kb">
+          <span class="tab-icon">🗂️</span> Knowledge Base Explorer
+        </button>
+        <button class="tab-btn" data-tab="presentation">
+          <span class="tab-icon">📑</span> Project &amp; Faculty Rubric
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-content">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: VERIFICATION STUDIO -->
+    <!-- ========================================== -->
+    <section id="tab-studio" class="tab-pane active">
+      <div class="pane-grid">
+        
+        <!-- Left: Input Controls -->
+        <div class="panel input-panel">
+          <div class="panel-header">
+            <h2>1 · Input: Type Any Question or Paste LLM Answer</h2>
+            <span class="panel-desc">Type your question to generate an AI answer, or test a pre-configured sample</span>
+          </div>
+
+          <!-- Quick Question Prompts -->
+          <div class="form-group">
+            <label>Quick Question Ideas (or type your own):</label>
+            <div class="quick-samples">
+              <button class="btn-chip" data-q="Give key milestones in AI.">🏆 AI Milestones</button>
+              <button class="btn-chip" data-q="What is BERT and how does it work?">🧠 What is BERT?</button>
+              <button class="btn-chip" data-q="Tell me about GPT-3 and ChatGPT.">🤖 GPT-3 &amp; ChatGPT</button>
+              <button class="btn-chip" data-q="What is the Transformer architecture?">⚡ Transformers</button>
+              <button class="btn-chip" data-q="What is an AI hallucination and why does it occur?">⚠️ AI Hallucinations</button>
+            </div>
+          </div>
+
+          <!-- Question Input -->
+          <div class="form-group">
+            <label for="input-question">Type Your Question Here:</label>
+            <input type="text" id="input-question" placeholder="e.g. Give key milestones in AI, or Who won the Turing test?" />
+          </div>
+
+          <!-- Model Generation Controls -->
+          <div class="ai-gen-toolbar">
+            <div class="gen-select-col">
+              <label for="select-gen-mode">Generative Model Mode:</label>
+              <select id="select-gen-mode">
+                <option value="realistic" selected>🤖 Realistic LLM (Generates fluent text with typical date/unit hallucinations)</option>
+                <option value="hallucinatory">⚠️ Hallucination Simulator (Injects obvious entity swaps &amp; fake awards for classroom demo)</option>
+                <option value="grounded">🎯 Grounded RAG Generator (Faithfully stays close to verified facts)</option>
+                <option value="ollama">🦙 Ollama Local Model (Connects to localhost:11434 if running)</option>
+              </select>
+            </div>
+            <button id="btn-ask-and-guard" class="btn btn-primary" title="Generate answer with AI and immediately audit it for hallucinations">
+              <span class="btn-icon">🚀</span> Ask AI &amp; Guard Answer
+            </button>
+          </div>
+
+          <div class="divider-row">
+            <span>OR Choose a Pre-configured PoC Sample</span>
+          </div>
+
+          <div class="form-group">
+            <label for="sample-preset">Benchmark Sample Preset (Table 8.1b):</label>
+            <div class="select-wrapper">
+              <select id="sample-preset">
+                <option value="">-- Choose a Pre-configured Sample (T1 to T10) --</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="label-with-action">
+              <label for="input-answer">LLM Answer Text to Verify:</label>
+              <button id="btn-gen-only" class="btn-link" title="Generate only into this box without verifying yet">✨ Generate Answer Only</button>
+            </div>
+            <textarea id="input-answer" rows="5" placeholder="The model's generated answer will appear here, or you can paste any custom LLM response..."></textarea>
+          </div>
+
+          <!-- Advanced Options (Collapsible) -->
+          <details class="advanced-options">
+            <summary>⚙️ Detection Settings &amp; Custom Knowledge Context</summary>
+            <div class="options-body">
+              <div class="form-group">
+                <label for="select-engine">Verification Engine:</label>
+                <select id="select-engine">
+                  <option value="lexical" selected>Fast Lexical &amp; Rule-Based Verifier (~3.4ms, Numbers/Entities/Negation)</option>
+                  <option value="nli">DeBERTa-v3 NLI Cross-Encoder (Semantic Contextual Entailment)</option>
+                  <option value="hybrid">Hybrid Ensemble (Lexical Precision + NLI Semantics)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="slider-threshold">Hallucination Threshold (&tau; = <span id="thresh-val">0.10</span>):</label>
+                <input type="range" id="slider-threshold" min="0.05" max="0.95" step="0.05" value="0.10" />
+                <span class="field-hint">Colab optimal threshold on validation set is &tau; = 0.10</span>
+              </div>
+
+              <div class="form-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="check-custom-ctx" />
+                  <span>Verify against Custom Reference Context instead of Default KB</span>
+                </label>
+              </div>
+
+              <div class="form-group" id="custom-ctx-group" style="display:none;">
+                <label for="input-custom-ctx">Custom Reference Text:</label>
+                <textarea id="input-custom-ctx" rows="4" placeholder="Paste trusted document / ground truth text here..."></textarea>
+              </div>
+            </div>
+          </details>
+
+          <div class="button-row">
+            <button id="btn-verify" class="btn btn-secondary">
+              <span class="btn-icon">🔍</span> Verify Answer Box
+            </button>
+            <button id="btn-clear" class="btn btn-secondary">
+              Clear All
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Verification Metrics Summary -->
+        <div class="panel metrics-panel">
+          <div class="panel-header">
+            <h2>3 · Output: Verification &amp; Hallucination Report</h2>
+            <span class="panel-desc" id="engine-status-tag">Engine: Fast Lexical &amp; Rule-Based</span>
+          </div>
+
+          <div class="metric-cards-grid">
+            <div class="metric-card">
+              <div class="metric-num" id="metric-total">0</div>
+              <div class="metric-label">Claims Checked</div>
+            </div>
+            <div class="metric-card card-success">
+              <div class="metric-num" id="metric-supported">0</div>
+              <div class="metric-label">Supported (Verified)</div>
+            </div>
+            <div class="metric-card card-danger">
+              <div class="metric-num" id="metric-flagged">0</div>
+              <div class="metric-label">Flagged Hallucinations</div>
+            </div>
+            <div class="metric-card card-warning">
+              <div class="metric-num" id="metric-rate">0%</div>
+              <div class="metric-label">Hallucination Rate</div>
+            </div>
+          </div>
+
+          <!-- Color-coded Annotated Answer -->
+          <div class="report-section">
+            <div class="section-title-row">
+              <h3>Annotated Answer</h3>
+              <div class="legend-pills">
+                <span class="legend-pill pill-supported">● Supported</span>
+                <span class="legend-pill pill-contradicted">▲ Contradicted</span>
+                <span class="legend-pill pill-unsupported">◆ Unsupported</span>
+              </div>
+            </div>
+            <div id="annotated-output" class="annotated-box">
+              <p class="placeholder-text">Submit an answer above to see claim-by-claim color highlighting and audit details.</p>
+            </div>
+          </div>
+
+          <!-- Guarded Answer Box -->
+          <div class="report-section">
+            <div class="section-title-row">
+              <h3>Guarded Answer <span class="tag-subtle">(only verified sentences with citations)</span></h3>
+              <div class="action-links">
+                <button id="btn-copy-guarded" class="btn-link" title="Copy text">📋 Copy</button>
+                <button id="btn-export-json" class="btn-link" title="Export report">💾 Export JSON</button>
+              </div>
+            </div>
+            <div id="guarded-output" class="guarded-box">
+              <p class="placeholder-text">[Guarded output will appear here once verified]</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Full-Width Bottom Table: Claim-by-Claim Verification -->
+      <div class="panel claim-table-panel">
+        <div class="panel-header">
+          <h2>2 · Processing: Claim-by-Claim Verification against Knowledge Base</h2>
+          <span class="panel-desc">Evidence sentence retrieved via TF-IDF cosine similarity with feature validation</span>
+        </div>
+
+        <div class="table-container">
+          <table class="claim-table" id="claim-results-table">
+            <thead>
+              <tr>
+                <th style="width: 40px;">#</th>
+                <th style="width: 32%;">Claim (sentence from LLM)</th>
+                <th style="width: 36%;">Best Evidence (Source)</th>
+                <th style="width: 60px;">Sim.</th>
+                <th style="width: 60px;">Cov.</th>
+                <th style="width: 140px;">Verdict</th>
+                <th>Diagnostic Explanation</th>
+              </tr>
+            </thead>
+            <tbody id="claim-table-body">
+              <tr>
+                <td colspan="7" class="empty-table-row">No claims verified yet. Choose a sample preset or enter text above.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Human in the loop review -->
+        <div class="human-review-bar">
+          <div class="review-info">
+            <span class="review-icon">👤</span>
+            <div>
+              <strong>Human-in-the-Loop Oversight (Responsible AI):</strong>
+              <p>Faculty &amp; users can audit flagged claims, override false alarms, or submit verified facts to the KB.</p>
+            </div>
+          </div>
+          <div class="review-actions">
+            <button class="btn btn-sm btn-outline" id="btn-audit-log">View Audit Summary</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: BENCHMARK & EVALUATION -->
+    <!-- ========================================== -->
+    <section id="tab-benchmark" class="tab-pane">
+      <div class="panel">
+        <div class="panel-header flex-between">
+          <div>
+            <h2>PoC Evaluation &amp; Benchmark (Table 8.1b)</h2>
+            <span class="panel-desc">10 hand-labelled test answers with 39 individual claims (14 gold hallucinations)</span>
+          </div>
+          <button id="btn-run-benchmark" class="btn btn-primary">
+            <span>🔄</span> Run Full Benchmark
+          </button>
+        </div>
+
+        <!-- Summary KPI Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-title">Accuracy</div>
+            <div class="kpi-value highlight-blue" id="bm-acc">89.7%</div>
+            <div class="kpi-sub">35 / 39 claims correct</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-title">Precision</div>
+            <div class="kpi-value highlight-green" id="bm-prec">0.8125</div>
+            <div class="kpi-sub">TP: 13, FP: 3</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-title">Recall</div>
+            <div class="kpi-value highlight-green" id="bm-rec">0.9286</div>
+            <div class="kpi-sub">TP: 13, FN: 1</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-title">F1-Score</div>
+            <div class="kpi-value highlight-purple" id="bm-f1">0.8667</div>
+            <div class="kpi-sub">Harmonic mean</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-title">Hallucination Reduction</div>
+            <div class="kpi-value highlight-emerald" id="bm-reduction">35.9% → 4.3%</div>
+            <div class="kpi-sub">Only 1 missed out of 23 kept</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-title">Avg. Latency</div>
+            <div class="kpi-value highlight-blue" id="bm-latency">12.3 ms</div>
+            <div class="kpi-sub">Ultra-fast local CPU</div>
+          </div>
+        </div>
+
+        <!-- Confusion Matrix & Error Diagnostics -->
+        <div class="grid-2col">
+          <!-- Confusion Matrix Visualizer -->
+          <div class="sub-panel">
+            <h3>Confusion Matrix (Supported vs. Hallucinated)</h3>
+            <div class="cm-container">
+              <div class="cm-labels-top">
+                <span>Predicted: Supported</span>
+                <span>Predicted: Hallucinated</span>
+              </div>
+              <div class="cm-grid">
+                <div class="cm-row-label">Actual: Supported</div>
+                <div class="cm-cell cm-tn" id="cm-tn">
+                  <div class="cm-num">22</div>
+                  <div class="cm-desc">True Negatives (TN)</div>
+                </div>
+                <div class="cm-cell cm-fp" id="cm-fp">
+                  <div class="cm-num">3</div>
+                  <div class="cm-desc">False Positives (FP)</div>
+                </div>
+
+                <div class="cm-row-label">Actual: Hallucinated</div>
+                <div class="cm-cell cm-fn" id="cm-fn">
+                  <div class="cm-num">1</div>
+                  <div class="cm-desc">False Negatives (FN)</div>
+                </div>
+                <div class="cm-cell cm-tp" id="cm-tp">
+                  <div class="cm-num">13</div>
+                  <div class="cm-desc">True Positives (TP)</div>
+                </div>
+              </div>
+            </div>
+            <p class="cm-footnote">
+              Gold standard: 14 Hallucinated, 25 Supported. HalluGuard successfully detects <strong>13 of 14</strong> hallucinations.
+            </p>
+          </div>
+
+          <!-- Error Analysis Breakdown -->
+          <div class="sub-panel">
+            <h3>Failure Case Analysis (Doc Section 8.3)</h3>
+            <div class="error-breakdown">
+              <div class="error-item fn-item">
+                <div class="error-badge badge-fn">False Negative (1 case)</div>
+                <p><strong>T2:</strong> <em>"BERT uses only the decoder part of the Transformer."</em></p>
+                <div class="error-explanation">
+                  <strong>Cause:</strong> High lexical overlap with <em>"BERT uses only the encoder..."</em> differing by one single word without numeric cue. Requires semantic NLI inference to resolve.
+                </div>
+              </div>
+
+              <div class="error-item fp-item">
+                <div class="error-badge badge-fp">False Positives (3 cases)</div>
+                <p><strong>T5, T7, T8:</strong> Paraphrased correct sentences with negation words (e.g., <em>"without"</em>, <em>"not"</em>).</p>
+                <div class="error-explanation">
+                  <strong>Cause:</strong> Lexical polarity check triggered false alarms when a fact was phrased with negative qualifiers (e.g. <em>"does not require recurrent connections"</em>).
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Per-Answer Breakdown Table (Table 8.1b) -->
+        <div class="sub-panel" style="margin-top: 20px;">
+          <h3>Table 8.1(b): Per-Answer Evaluation Breakdown</h3>
+          <table class="styled-table" id="table-81b">
+            <thead>
+              <tr>
+                <th>Test ID</th>
+                <th>Question</th>
+                <th>Claims</th>
+                <th>Gold Hallucinated</th>
+                <th>Detected / False Alarms</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="table-81b-body">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: COLAB RESEARCH HUB (HaluEval & DeBERTa) -->
+    <!-- ========================================== -->
+    <section id="tab-colab" class="tab-pane">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Colab Research Hub: HaluEval &amp; DeBERTa-v3 Cross-Encoder</h2>
+          <span class="panel-desc">Direct findings and evaluation from <code>genAi_ca_02.ipynb</code> (Google Colab Tesla T4)</span>
+        </div>
+
+        <!-- Colab Notebook Overview Banner -->
+        <div class="colab-card">
+          <div class="colab-info">
+            <span class="badge-colab">Google Colab Run</span>
+            <h3>genAi_ca_02.ipynb Experiment Details</h3>
+            <p>
+              Trained/evaluated <code>cross-encoder/nli-deberta-v3-small</code> on 1,200 QA examples from the RUCAIBox/HaluEval dataset.
+              Explored entailment-based hallucination scoring ($1.0 - P(\text{entailment})$) with threshold optimization.
+            </p>
+          </div>
+          <div class="colab-download">
+            <a href="/notebook/genAi_ca_02.ipynb" download class="btn btn-outline">
+              📥 Download .ipynb File
+            </a>
+          </div>
+        </div>
+
+        <!-- Colab Metrics Row -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-title">HaluEval Samples</div>
+            <div class="kpi-value">1,200</div>
+            <div class="kpi-sub">600 correct + 600 hallucinated</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-title">Optimal Threshold</div>
+            <div class="kpi-value highlight-blue">&tau; = 0.10</div>
+            <div class="kpi-sub">Validation F1: 0.5597</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-title">Colab Test Recall</div>
+            <div class="kpi-value highlight-green">80.0%</div>
+            <div class="kpi-sub">96 / 120 hallucinations detected</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-title">Colab Test F1</div>
+            <div class="kpi-value highlight-purple">0.5836</div>
+            <div class="kpi-sub">Test Accuracy: 42.92%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-title">Colab ROC-AUC</div>
+            <div class="kpi-value highlight-emerald">0.5703</div>
+            <div class="kpi-sub">DeBERTa-v3 cross-encoder</div>
+          </div>
+        </div>
+
+        <!-- Colab Validation Threshold Sweep Table & Interactive verify_answer() -->
+        <div class="grid-2col">
+          <!-- Threshold Sweep Table (Page 7 from Colab) -->
+          <div class="sub-panel">
+            <h3>Validation Threshold Sweep (Colab Page 7)</h3>
+            <div class="table-container" style="max-height: 280px; overflow-y: auto;">
+              <table class="styled-table mini-table">
+                <thead>
+                  <tr>
+                    <th>Threshold</th>
+                    <th>Precision</th>
+                    <th>Recall</th>
+                    <th>F1-Score</th>
+                  </tr>
+                </thead>
+                <tbody id="halueval-sweep-body">
+                  <!-- Populated via JS -->
+                </tbody>
+              </table>
+            </div>
+            <p class="field-hint" style="margin-top: 8px;">
+              Threshold &tau; = 0.10 achieved maximum F1-score (0.5597) on the validation split.
+            </p>
+          </div>
+
+          <!-- Live Colab verify_answer() Test Sandbox -->
+          <div class="sub-panel">
+            <h3>Interactive verify_answer() Sandbox</h3>
+            <p class="panel-desc">Test the exact Colab function with custom Context and Answer:</p>
+            
+            <div class="quick-samples">
+              <span>Quick Demos:</span>
+              <button class="btn-chip" data-sample="eiffel-paris">Eiffel Tower (Paris)</button>
+              <button class="btn-chip" data-sample="eiffel-berlin">Eiffel Tower (Berlin)</button>
+              <button class="btn-chip" data-sample="sun">Earth / Sun</button>
+              <button class="btn-chip" data-sample="mars">Earth / Mars</button>
+            </div>
+
+            <div class="form-group">
+              <label for="colab-context">Reference Context:</label>
+              <textarea id="colab-context" rows="2" placeholder="Reference context..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="colab-answer">Answer to Verify:</label>
+              <input type="text" id="colab-answer" placeholder="Answer to verify..." />
+            </div>
+
+            <button id="btn-colab-run" class="btn btn-primary btn-sm">
+              Run Colab verify_answer()
+            </button>
+
+            <!-- Result Box -->
+            <div id="colab-result-box" class="colab-result-box" style="display:none; margin-top:12px;">
+              <div class="res-row"><strong>Prediction:</strong> <span id="colab-res-status" class="badge-tag"></span></div>
+              <div class="res-row"><strong>Hallucination Score:</strong> <code id="colab-res-score"></code></div>
+              <div class="res-row"><strong>Entailment Probability:</strong> <code id="colab-res-entail"></code></div>
+              <div class="res-row"><strong>Threshold:</strong> <code id="colab-res-thresh"></code></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HaluEval Real QA Dataset Samples Viewer -->
+        <div class="sub-panel" style="margin-top: 20px;">
+          <h3>HaluEval QA Dataset Samples</h3>
+          <table class="styled-table" id="halueval-samples-table">
+            <thead>
+              <tr>
+                <th style="width: 50px;">ID</th>
+                <th style="width: 35%;">Ground Truth Knowledge</th>
+                <th style="width: 20%;">Question</th>
+                <th style="width: 20%;">Correct Answer</th>
+                <th style="width: 20%;">Hallucinated Answer</th>
+              </tr>
+            </thead>
+            <tbody id="halueval-samples-body">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: KNOWLEDGE BASE EXPLORER -->
+    <!-- ========================================== -->
+    <section id="tab-kb" class="tab-pane">
+      <div class="panel">
+        <div class="panel-header flex-between">
+          <div>
+            <h2>Trusted Knowledge Base Explorer</h2>
+            <span class="panel-desc">Curated factual grounding sentences across 5 fundamental AI domains</span>
+          </div>
+          <button id="btn-open-add-fact" class="btn btn-outline btn-sm">
+            ➕ Add Verified Fact
+          </button>
+        </div>
+
+        <!-- Add Fact Modal/Form (Hidden by default) -->
+        <div id="add-fact-container" class="card-callout" style="display:none; margin-bottom: 20px;">
+          <h4>Add New Ground Truth Fact to Knowledge Base</h4>
+          <div class="form-group">
+            <label for="new-fact-text">Factual Sentence:</label>
+            <input type="text" id="new-fact-text" placeholder="e.g. OpenAI released the GPT-4 paper in March 2023." />
+          </div>
+          <div class="form-group">
+            <label for="new-fact-file">Target File / Domain:</label>
+            <select id="new-fact-file">
+              <option value="custom_facts.txt">custom_facts.txt (User Contributed)</option>
+              <option value="transformer.txt">transformer.txt</option>
+              <option value="bert.txt">bert.txt</option>
+              <option value="gpt.txt">gpt.txt</option>
+              <option value="ai_history.txt">ai_history.txt</option>
+              <option value="hallucination_concepts.txt">hallucination_concepts.txt</option>
+            </select>
+          </div>
+          <div class="button-row">
+            <button id="btn-submit-fact" class="btn btn-primary btn-sm">Save &amp; Index Fact</button>
+            <button id="btn-cancel-fact" class="btn btn-secondary btn-sm">Cancel</button>
+          </div>
+        </div>
+
+        <!-- KB Domain Files Grid -->
+        <div class="kb-files-grid" id="kb-domains-container">
+          <!-- Populated dynamically via JS -->
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 5: PRESENTATION & FACULTY RUBRIC -->
+    <!-- ========================================== -->
+    <section id="tab-presentation" class="tab-pane">
+      <div class="panel">
+        <div class="presentation-header">
+          <div class="tag-pres">Academic Project Presentation</div>
+          <h2>HalluGuard: A Claim-Level Hallucination Detector and Guarded-Answer Generator for LLM Outputs</h2>
+          <div class="pres-meta">
+            <span><strong>Course:</strong> Generative AI (CA-3 Mini Project)</span>
+            <span><strong>Faculty Guide:</strong> Prof. Rakhi Jadhav</span>
+            <span><strong>Date:</strong> 15 November 2026</span>
+          </div>
+        </div>
+
+        <!-- Team Contribution Table -->
+        <div class="sub-panel">
+          <h3>1. Student Details &amp; Contributions</h3>
+          <table class="styled-table">
+            <thead>
+              <tr>
+                <th>Student Name</th>
+                <th>Roll No</th>
+                <th>Class / Div</th>
+                <th>Key Contribution in PoC</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Suhas Arali</strong></td>
+                <td>24</td>
+                <td>D20B (Batch B)</td>
+                <td>Knowledge Base design, TF-IDF retrieval index, and dataset curation.</td>
+              </tr>
+              <tr>
+                <td><strong>Aditya Gaikar</strong></td>
+                <td>42</td>
+                <td>D20B (Batch B)</td>
+                <td>DeBERTa-v3 NLI Cross-Encoder model in Colab &amp; threshold sweep analysis.</td>
+              </tr>
+              <tr>
+                <td><strong>Rohan Bhangale</strong></td>
+                <td>27</td>
+                <td>D20B (Batch B)</td>
+                <td>Core Lexical Verification engine (Numbers, Entities, Negation, Guarded Answer).</td>
+              </tr>
+              <tr>
+                <td><strong>Ayush Karath</strong></td>
+                <td>37</td>
+                <td>D20B (Batch B)</td>
+                <td>Full-stack Flask web application, interactive UI, and evaluation benchmarking.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Problem & Solution Overview -->
+        <div class="grid-2col" style="margin-top: 20px;">
+          <div class="sub-panel">
+            <h3>2. Problem Statement</h3>
+            <p>
+              Large Language Models (LLMs) such as ChatGPT, Claude, and Gemini produce fluent, authoritative text even when factual details are completely incorrect.
+              This limitation arises from next-token autoregressive prediction without verification capabilities, knowledge cutoff boundaries, and finite context windows.
+              Users (especially students) cannot differentiate between reliable and fabricated statements.
+            </p>
+          </div>
+          <div class="sub-panel">
+            <h3>3. Proposed GenAI Solution</h3>
+            <p>
+              HalluGuard serves as an automated post-generation guardrail. It decomposes generated text into individual claims, matches each claim to trusted evidence
+              via TF-IDF cosine similarity, executes deep feature checks (numbers with units, named entities, negation polarity, and semantic coverage),
+              and produces an annotated color-coded answer alongside a guarded answer containing only verified facts with source citations.
+            </p>
+          </div>
+        </div>
+
+        <!-- Architecture Diagram Visual -->
+        <div class="sub-panel" style="margin-top: 20px;">
+          <h3>4. System Architecture &amp; Workflow (Figure 1)</h3>
+          <div class="diagram-wrapper">
+            <img src="{{ url_for('static', filename='diagrams/architecture.svg') }}" alt="HalluGuard Architecture Diagram" class="arch-img" />
+          </div>
+        </div>
+
+        <!-- Responsible AI Analysis Table -->
+        <div class="sub-panel" style="margin-top: 20px;">
+          <h3>5. Responsible AI Analysis (Mandatory Rubric)</h3>
+          <table class="styled-table">
+            <thead>
+              <tr>
+                <th>Risk Category</th>
+                <th>Present?</th>
+                <th>Possible Impact</th>
+                <th>Mitigation Strategy</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Bias</strong></td>
+                <td>Yes (limited)</td>
+                <td>Dependent on KB content; English-only rules may unfairly flag non-standard English phrasing.</td>
+                <td>Transparent evidence citation, open multi-domain sources, and human audit review.</td>
+              </tr>
+              <tr>
+                <td><strong>Hallucination</strong></td>
+                <td>Yes</td>
+                <td>LLM outputs hallucinate; detector can have false alarms (FP) or missed contradictions (FN).</td>
+                <td>Multi-tiered verification, guarded answer generation, and human-in-the-loop review.</td>
+              </tr>
+              <tr>
+                <td><strong>Privacy</strong></td>
+                <td>No / Low</td>
+                <td>No user text is transmitted to external clouds or third-party servers; runs 100% locally.</td>
+                <td>Complete offline processing on localhost with no telemetry or external data logging.</td>
+              </tr>
+              <tr>
+                <td><strong>Misuse / Security</strong></td>
+                <td>Yes (limited)</td>
+                <td>Users might blindly trust a "Verified" badge without checking primary sources.</td>
+                <td>Clear UI disclaimers that HalluGuard is a verification aid, not infallible mathematical proof.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Faculty Assessment Rubric (10 Marks) -->
+        <div class="sub-panel" style="margin-top: 20px;">
+          <h3>6. Faculty Assessment Rubric (Maximum Marks: 10)</h3>
+          <table class="styled-table rubric-table">
+            <thead>
+              <tr>
+                <th>Assessment Criterion</th>
+                <th>Max Marks</th>
+                <th>Project Implementation Evidence</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Problem identification and relevance</td>
+                <td>1</td>
+                <td>Addresses critical LLM hallucination in education, research, and chatbots.</td>
+              </tr>
+              <tr>
+                <td>Understanding of selected GenAI concept</td>
+                <td>1</td>
+                <td>Deep analysis of Intrinsic vs Extrinsic hallucination and RAG grounding.</td>
+              </tr>
+              <tr>
+                <td>System architecture / design</td>
+                <td>1</td>
+                <td>Full 7-step pipeline: Input → Preprocessing → Retrieval → Verification → Labels → Output → Evaluation.</td>
+              </tr>
+              <tr>
+                <td>Working implementation</td>
+                <td>2</td>
+                <td>Complete Flask backend + TF-IDF retriever + Rule-based &amp; DeBERTa NLI engines.</td>
+              </tr>
+              <tr>
+                <td>Demonstration and output</td>
+                <td>2</td>
+                <td>Interactive frontend, live claim highlight badges, guarded answers, citation tags.</td>
+              </tr>
+              <tr>
+                <td>Evaluation and analysis</td>
+                <td>1</td>
+                <td>Table 8.1b benchmark (89.7% accuracy, 0.81 precision, 0.93 recall, 12ms latency) + Colab HaluEval.</td>
+              </tr>
+              <tr>
+                <td>Responsible AI considerations</td>
+                <td>1</td>
+                <td>Comprehensive risk matrix, bias &amp; privacy analysis, and human oversight panel.</td>
+              </tr>
+              <tr>
+                <td>Viva / individual understanding</td>
+                <td>1</td>
+                <td>Demonstrated capability across all 4 team members with clear division of work.</td>
+              </tr>
+              <tr class="total-row">
+                <td><strong>Total Marks</strong></td>
+                <td><strong>10</strong></td>
+                <td><strong>Ready-to-run demonstration for Faculty Rakhi Jadhav</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Scripts -->
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
+

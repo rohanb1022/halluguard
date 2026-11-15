@@ -1,0 +1,7 @@
+BERT stands for Bidirectional Encoder Representations from Transformers and was introduced by Devlin et al. in 2018.
+BERT is designed to pre-train deep bidirectional representations by jointly conditioning on both left and right context in all layers.
+BERT uses only the encoder part of the Transformer architecture.
+BERT is pre-trained using two unsupervised tasks: Masked Language Modeling and Next Sentence Prediction.
+BERT can be fine-tuned with just one additional output layer for a wide range of NLP tasks.
+BERT achieved state-of-the-art results on eleven natural language processing tasks upon its release.
+

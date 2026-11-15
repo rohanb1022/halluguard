@@ -1,0 +1,7 @@
+An AI hallucination occurs when a large language model generates text that is factually incorrect, nonsensical, or unfaithful to the source.
+Intrinsic hallucination refers to generated output that directly contradicts the source or reference information.
+Extrinsic hallucination refers to generated output that cannot be verified or grounded from the reference source and is fabricated.
+LLM hallucinations are caused by next-token prediction objectives, finite context windows, and knowledge cutoff limits.
+Grounding answers with Retrieval-Augmented Generation and claim-level verification significantly reduces hallucination risk.
+Human oversight and citation tracking are essential for trustworthy deployment of generative AI systems.
+
