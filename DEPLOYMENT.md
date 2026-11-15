@@ -1,10 +1,52 @@
 # 🚀 HalluGuard Deployment Guide (100% Free & Open Source)
 
-This project is configured and ready to deploy to free cloud hosting platforms. All necessary configuration files (`Procfile`, `render.yaml`, `Dockerfile`, `vercel.json`, `wsgi.py`, and `requirements.txt`) are included in this repository.
+This project is fully configured to deploy to **Vercel**, **Render**, and **Hugging Face Spaces**. All necessary configuration files (`vercel.json`, `api/index.py`, `Procfile`, `render.yaml`, `Dockerfile`, `wsgi.py`, and `requirements.txt`) are included in this repository.
 
 ---
 
-## 🌟 Method 1: Deploy on Render.com (Recommended for College Presentations)
+## ⚡ Method 1: Deploy on Vercel (100% Free & Fast)
+
+Vercel provides free, high-speed global serverless hosting with an official `.vercel.app` domain (e.g., `https://halluguard.vercel.app`).
+
+### Option A: Deploy via Vercel Web Dashboard (Recommended)
+
+#### Step 1: Push Code to your GitHub
+1. Go to [github.com/new](https://github.com/new) and create a repository named `halluguard`.
+2. In your terminal, run:
+   ```powershell
+   git add .
+   git commit -m "Configure Vercel serverless deployment"
+   git branch -M main
+   git remote add origin https://github.com/<YOUR_GITHUB_USERNAME>/halluguard.git
+   git push -u origin main
+   ```
+
+#### Step 2: Import & Deploy on Vercel
+1. Go to **[vercel.com/new](https://vercel.com/new)** and sign in with GitHub (Free).
+2. Find your **`halluguard`** repository and click **Import**.
+3. In the configure screen:
+   - **Framework Preset:** Leave as `Other` (Vercel automatically detects `vercel.json` and `@vercel/python`).
+   - **Root Directory:** `./` (default).
+4. Click **Deploy**.
+5. Within 1 minute, your app will be live globally at:
+   👉 **`https://halluguard.vercel.app`**
+
+---
+
+### Option B: Deploy directly using Vercel CLI (No GitHub needed)
+If you have Node.js installed, open terminal in this folder and run:
+```powershell
+npx vercel
+```
+1. Press `y` to confirm setup.
+2. Link to existing project? `N`.
+3. Project name? Press Enter (or `halluguard`).
+4. In which directory is your code located? `./`
+5. Vercel deploys immediately and returns your live URL in the terminal!
+
+---
+
+## 🌟 Method 2: Deploy on Render.com
 
 Render offers a **100% Free Web Service tier** that gives you a public HTTPS URL (e.g., `https://halluguard.onrender.com`) that can be accessed from any phone, laptop, or faculty review portal.
 
@@ -103,3 +145,4 @@ Open [http://localhost:5000](http://localhost:5000).
 | **`vercel.json`** | Serverless Python build config for Vercel |
 | **`wsgi.py`** | Production WSGI entry point binding to `$PORT` |
 | **`requirements.txt`** | Includes `gunicorn` and `waitress` for Linux/Windows production servers |
+

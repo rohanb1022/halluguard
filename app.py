@@ -9,10 +9,15 @@ from core.evaluate import run_benchmark_evaluation
 from core.halueval_bench import get_halueval_overview
 from core.generator import LLMGenerator
 
-app = Flask(__name__)
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, "templates"),
+    static_folder=os.path.join(BASE_DIR, "static")
+)
 
 # Initialize singletons
-kb = KnowledgeBase()
+kb = KnowledgeBase(kb_dir=os.path.join(BASE_DIR, "kb"))
 lexical_verifier = HallucinationVerifier(kb)
 nli_engine = NLICrossEncoderEngine()
 generator = LLMGenerator(kb)

@@ -12,7 +12,7 @@ class KnowledgeBase:
     """
 
     def __init__(self, kb_dir: Optional[str] = None):
-        self.kb_dir = kb_dir or os.path.join(os.path.dirname(os.path.dirname(__file__)), "kb")
+        self.kb_dir = os.path.abspath(kb_dir or os.path.join(os.path.dirname(os.path.dirname(__file__)), "kb"))
         self.sentences: List[str] = []
         self.sources: List[str] = []
         self.vectorizer: Optional[TfidfVectorizer] = None
